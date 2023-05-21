@@ -1,12 +1,14 @@
-using UnityEngine;
-using UnityEngine.UI;
 using UnityFigmaBridge.Editor.FigmaApi;
-using UnityFigmaBridge.Runtime.UI;
-using Color = UnityEngine.Color;
 
-namespace UnityFigmaBridge.Editor.PrototypeFlow
+namespace UnityFigmaBridge.Editor.Settings
 {
-    public static class PrototypeFlowManager
+    using Runtime.UI;
+    using UnityEngine;
+    using UnityEngine.UI;
+    using Color = UnityEngine.Color;
+
+    [CreateAssetMenu(menuName = "Figma Bridge/Default Flow Generator",fileName = "Default Flow Generator")]
+    public class UnityFigmaBridgeFlowGenerator : ScriptableObject
     {
         /// <summary>
         /// Add in prototype flow functionality for this node, if required
@@ -14,10 +16,10 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
         /// <param name="node"></param>
         /// <param name="nodeGameObject"></param>
         /// <param name="figmaImportProcessData"></param>
-        public static void ApplyPrototypeFunctionalityToNode(Node node, GameObject nodeGameObject,
+        public virtual void ApplyFunctionalityToNode(
+            Node node, GameObject nodeGameObject,
             FigmaImportProcessData figmaImportProcessData)
         {
-
             if (CheckAddButtonBehaviour(node, figmaImportProcessData))
             {
                 if (nodeGameObject.GetComponent<Button>() == null)
@@ -28,20 +30,19 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
                     for (var i = 0; i < nodeGameObject.transform.childCount; i++)
                     {
                         var child = nodeGameObject.transform.GetChild(i);
-                        if (child.name.ToLower().Contains("selected"))
+                        if (!child.name.ToLower().Contains("selected")) continue;
+                        
+                        newButtonComponent.targetGraphic = child.GetComponent<Graphic>();
+                        newButtonComponent.transition = Selectable.Transition.ColorTint;
+                        newButtonComponent.colors = new ColorBlock
                         {
-                            newButtonComponent.targetGraphic = child.GetComponent<Graphic>();
-                            newButtonComponent.transition = Selectable.Transition.ColorTint;
-                            newButtonComponent.colors = new ColorBlock
-                            {
-                                disabledColor = new Color(0, 0, 0, 0),
-                                normalColor = new Color(0, 0, 0, 0),
-                                highlightedColor = Color.white,
-                                pressedColor = Color.white,
-                                selectedColor = Color.white,
-                                colorMultiplier = 1,
-                            };
-                        }
+                            disabledColor = new Color(0, 0, 0, 0),
+                            normalColor = new Color(0, 0, 0, 0),
+                            highlightedColor = Color.white,
+                            pressedColor = Color.white,
+                            selectedColor = Color.white,
+                            colorMultiplier = 1,
+                        };
                     }
                 }
             }
@@ -56,7 +57,7 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
             // Future options to add transition information
         }
 
-        private static bool CheckAddButtonBehaviour(Node node, FigmaImportProcessData figmaImportProcessData)
+        public virtual bool CheckAddButtonBehaviour(Node node, FigmaImportProcessData figmaImportProcessData)
         {
             // Apply rules
             if (node.name.ToLower().Contains("button")) return true;

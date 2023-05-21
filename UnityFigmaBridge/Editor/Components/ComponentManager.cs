@@ -130,8 +130,7 @@ namespace UnityFigmaBridge.Editor.Components
                     // Debug.Log($"Prefab instance root found for object {t.gameObject.name}, skipping");
                 }
             }
-
-
+            
             // Track a list of placed and modified components, to allow effective saving
             var modifiedPrefabInstances = new List<GameObject>();
             foreach (var placeholder in targetPlaceHolderComponents)
@@ -214,6 +213,9 @@ namespace UnityFigmaBridge.Editor.Components
         /// <param name="figmaImportProcessData"></param>
         private static void ApplyFigmaProperties(Node node, GameObject nodeObject,Node parentNode, FigmaImportProcessData figmaImportProcessData)
         {
+            var settings = figmaImportProcessData.Settings;
+            var flow = settings.FlowGenerator;
+            
             // There are two cases that this would be a substitution - either the component instance itself,
             // or the original component node could have be a substitution (would have an image component that is NOT a FigmaImage)
             // TODO - Optimise and remove need for Image component check
@@ -235,7 +237,7 @@ namespace UnityFigmaBridge.Editor.Components
             }
 
             // Apply prototype elements for this node as required (such as buttons etc
-            PrototypeFlowManager.ApplyPrototypeFunctionalityToNode(node, nodeObject, figmaImportProcessData);
+            flow.ApplyFunctionalityToNode(node, nodeObject, figmaImportProcessData);
             
             // Apply layout properties to this node as required (eg vertical layout groups etc)
             FigmaLayoutManager.ApplyLayoutPropertiesForNode(nodeObject,node,figmaImportProcessData,out var scrollContentGameObject);

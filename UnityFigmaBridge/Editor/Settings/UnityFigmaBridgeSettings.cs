@@ -6,9 +6,10 @@ using UnityFigmaBridge.Editor.FigmaApi;
 
 namespace UnityFigmaBridge.Editor.Settings
 {
+    using UnityFigmaBridge.Editor.Settings;
+
     public class UnityFigmaBridgeSettings : ScriptableObject
     {
-       
         [Tooltip("The FIGMA Document URL to import")]
         public string DocumentUrl;
         
@@ -43,6 +44,7 @@ namespace UnityFigmaBridge.Editor.Settings
         [HideInInspector]
         public List<FigmaPageData> PageDataList = new ();
         
+        public UnityFigmaBridgeFlowGenerator FlowGenerator;
 
         public string FileId {
             get

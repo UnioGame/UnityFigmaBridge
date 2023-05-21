@@ -100,11 +100,21 @@ namespace UnityFigmaBridge.Editor.Settings
         public static UnityFigmaBridgeSettings GenerateUnityFigmaBridgeSettingsAsset()
         {
             // try create a new version asset.
-            var newSettingsAsset = UnityFigmaBridgeSettings.CreateInstance<UnityFigmaBridgeSettings>();
+            var newSettingsAsset = ScriptableObject.CreateInstance<UnityFigmaBridgeSettings>();
+            var defaultFLowGenerator = ScriptableObject.CreateInstance<UnityFigmaBridgeFlowGenerator>();
 
-            // Save to the project
-            AssetDatabase.CreateAsset(newSettingsAsset, "Assets/UnityFigmaBridgeSettings.asset");
+            var generatorPath = "Assets/UnityFigmaBridge/UnityFigmaBridgeFlowGenerator.asset";
+            var settingsPath = "Assets/UnityFigmaBridge/UnityFigmaBridgeSettings.asset";
+            
+            AssetDatabase.CreateAsset(defaultFLowGenerator,generatorPath );
             AssetDatabase.SaveAssets();
+
+            defaultFLowGenerator = AssetDatabase.LoadAssetAtPath<UnityFigmaBridgeFlowGenerator>(generatorPath);
+            newSettingsAsset.FlowGenerator = defaultFLowGenerator;
+            // Save to the project
+            AssetDatabase.CreateAsset(newSettingsAsset,settingsPath );
+            AssetDatabase.SaveAssets();
+            
             Debug.Log("Generating UnityFigmaBridgeSettings asset", newSettingsAsset);
 
             return newSettingsAsset;
