@@ -455,9 +455,45 @@ namespace UnityFigmaBridge.Editor
                 CleanUpPostGeneration();
                 return;
             }
-           
-            
-            // Lastly, for prototype mode, instantiate the default flowScreen and set the scaler up appropriately
+
+            try
+            {
+                // Lastly, for prototype mode, instantiate the default flowScreen and set the scaler up appropriately
+                BuildPrototypeFlow(figmaBridgeProcessData);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                throw;
+            }
+            finally
+            {
+                CleanUpPostGeneration();
+                EditorUtility.ClearProgressBar();
+                AssetDatabase.Refresh();
+            }
+
+            var settings = figmaBridgeProcessData.Settings;
+            var commands = settings.PostBuildCommands;
+
+            foreach (var commandAsset in commands)
+            {
+                if(commandAsset == null) continue;
+                try
+                {
+                    commandAsset.Execute();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+
+        }
+
+
+        private static void BuildPrototypeFlow(FigmaImportProcessData figmaBridgeProcessData)
+        {
             if (s_UnityFigmaBridgeSettings.BuildPrototypeFlow)
             {
                 // Make sure all required default elements are present
@@ -476,10 +512,12 @@ namespace UnityFigmaBridge.Editor
                     var defaultTransitionAnimationEffect = AssetDatabase.LoadAssetAtPath("Packages/com.simonoliver.unityfigma/UnityFigmaBridge/Assets/TransitionFadeToBlack.prefab", typeof(GameObject)) as GameObject;
                     var transitionObject = (GameObject) PrefabUtility.InstantiatePrefab(defaultTransitionAnimationEffect,
                         screenController.transform.transform);
-                    screenController.TransitionEffect =
-                        transitionObject.GetComponent<TransitionEffect>();
-                    
-                    UnityUiUtils.SetTransformFullStretch(transitionObject.transform as RectTransform);
+
+                    if (transitionObject != null)
+                    {
+                        screenController.TransitionEffect = transitionObject.GetComponent<TransitionEffect>();
+                        UnityUiUtils.SetTransformFullStretch(transitionObject.transform as RectTransform); 
+                    }
                 }
 
                 // Set start flowScreen on stage by default                
@@ -504,9 +542,6 @@ namespace UnityFigmaBridge.Editor
                 // Write CS file with references to flowScreen name
                 if (s_UnityFigmaBridgeSettings.CreateScreenNameCSharpFile) ScreenNameCodeGenerator.WriteScreenNamesCodeFile(figmaBridgeProcessData.ScreenPrefabs);
             }
-            CleanUpPostGeneration();
-            EditorUtility.ClearProgressBar();
-            AssetDatabase.Refresh();
         }
 
         /// <summary>

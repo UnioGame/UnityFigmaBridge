@@ -4,6 +4,10 @@ using System.Linq;
 using UnityEngine;
 using UnityFigmaBridge.Editor.FigmaApi;
 
+#if ODIN_INSPECTOR
+using Sirenix.OdinInspector;
+#endif
+
 namespace UnityFigmaBridge.Editor.Settings
 {
     using UnityFigmaBridge.Editor.Settings;
@@ -45,6 +49,11 @@ namespace UnityFigmaBridge.Editor.Settings
         public List<FigmaPageData> PageDataList = new ();
         
         public UnityFigmaBridgeFlowGenerator FlowGenerator;
+
+#if ODIN_INSPECTOR
+        [InlineEditor]
+#endif
+        public List<PostBuildFigmaFlowCommandAsset> PostBuildCommands = new List<PostBuildFigmaFlowCommandAsset>();
 
         public string FileId {
             get
@@ -98,5 +107,10 @@ namespace UnityFigmaBridge.Editor.Settings
             Selected = true; // default is true
         }
     }
-    
+
+
+    public abstract class PostBuildFigmaFlowCommandAsset : ScriptableObject
+    {
+        public abstract void Execute();
+    }
 }
