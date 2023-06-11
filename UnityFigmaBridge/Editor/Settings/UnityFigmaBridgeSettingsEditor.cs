@@ -4,8 +4,15 @@ using UnityEditor;
 using UnityEngine;
 using UnityFigmaBridge.Editor.FigmaApi;
 
+#if ODIN_INSPECTOR
+using Sirenix.OdinInspector;
+#endif
+
 namespace UnityFigmaBridge.Editor.Settings
 {
+    using System;
+    using Sirenix.OdinInspector.Editor;
+
     [CustomEditor(typeof(UnityFigmaBridgeSettings))]
     public sealed class UnityFigmaBridgeSettingsEditor : UnityEditor.Editor
     {
@@ -18,7 +25,9 @@ namespace UnityFigmaBridge.Editor.Settings
             var targetSettingsObject = target as UnityFigmaBridgeSettings;
             var onlyImportPages= targetSettingsObject.OnlyImportSelectedPages;
             var preEditUrl= targetSettingsObject.DocumentUrl;
-            base.OnInspectorGUI();
+            
+            DrawInspector(targetSettingsObject);
+            
             // If the URL has changed, we want to reset the select pages to off and clear
             if (targetSettingsObject.DocumentUrl != preEditUrl)
             {
@@ -53,6 +62,33 @@ namespace UnityFigmaBridge.Editor.Settings
                     AssetDatabase.SaveAssetIfDirty(targetSettingsObject);
                 }
             }
+
+            if (GUILayout.Button("Save"))
+            {
+                targetSettingsObject.UpdateRootGenerationPath();
+            }
+            
+        }
+
+#if ODIN_INSPECTOR
+        private PropertyTree _propertyTree;
+#endif
+        private void DrawInspector(UnityFigmaBridgeSettings settings)
+        {
+#if ODIN_INSPECTOR
+            _propertyTree ??= PropertyTree.Create(settings);
+            _propertyTree.Draw();
+            return;
+#endif
+            base.OnInspectorGUI();
+        }
+
+        private void OnDisable()
+        {
+#if ODIN_INSPECTOR
+            _propertyTree?.Dispose();
+            _propertyTree = null;
+#endif
         }
 
 

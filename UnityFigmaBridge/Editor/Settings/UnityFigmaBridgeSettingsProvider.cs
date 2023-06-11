@@ -109,8 +109,13 @@ namespace UnityFigmaBridge.Editor.Settings
             AssetDatabase.CreateAsset(defaultFLowGenerator,generatorPath );
             AssetDatabase.SaveAssets();
 
-            defaultFLowGenerator = AssetDatabase.LoadAssetAtPath<UnityFigmaBridgeFlowGenerator>(generatorPath);
-            newSettingsAsset.FlowGenerator = defaultFLowGenerator;
+            var generators = newSettingsAsset.FlowGenerators;
+            if (generators.Count == 0)
+            {
+                defaultFLowGenerator = AssetDatabase.LoadAssetAtPath<UnityFigmaBridgeFlowGenerator>(generatorPath);
+                generators.Add(defaultFLowGenerator);
+            }
+            
             // Save to the project
             AssetDatabase.CreateAsset(newSettingsAsset,settingsPath );
             AssetDatabase.SaveAssets();

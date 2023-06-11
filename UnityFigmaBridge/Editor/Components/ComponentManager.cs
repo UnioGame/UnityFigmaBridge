@@ -214,7 +214,7 @@ namespace UnityFigmaBridge.Editor.Components
         private static void ApplyFigmaProperties(Node node, GameObject nodeObject,Node parentNode, FigmaImportProcessData figmaImportProcessData)
         {
             var settings = figmaImportProcessData.Settings;
-            var flow = settings.FlowGenerator;
+            var flows = settings.FlowGenerators;
             
             // There are two cases that this would be a substitution - either the component instance itself,
             // or the original component node could have be a substitution (would have an image component that is NOT a FigmaImage)
@@ -236,8 +236,11 @@ namespace UnityFigmaBridge.Editor.Components
                 }
             }
 
-            // Apply prototype elements for this node as required (such as buttons etc
-            flow.ApplyFunctionalityToNode(node, nodeObject, figmaImportProcessData);
+            foreach (var flow in flows)
+            {
+                // Apply prototype elements for this node as required (such as buttons etc
+                flow.ApplyFunctionalityToNode(node, nodeObject, figmaImportProcessData);
+            }
             
             // Apply layout properties to this node as required (eg vertical layout groups etc)
             FigmaLayoutManager.ApplyLayoutPropertiesForNode(nodeObject,node,figmaImportProcessData,out var scrollContentGameObject);

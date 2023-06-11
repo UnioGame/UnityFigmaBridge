@@ -5,42 +5,71 @@ using UnityFigmaBridge.Editor.FigmaApi;
 
 namespace UnityFigmaBridge.Editor.Utils
 {
+    using Settings;
+    using UnityEditor;
+    using UnityEngine;
+
     public static class FigmaPaths
     {
         /// <summary>
         ///  Root folder for assets
         /// </summary>
-        public static string FigmaAssetsRootFolder = "Assets/Figma";
+        private static string _figmaAssetsRootFolder = "Assets/Figma";
+        
+        public static UnityFigmaBridgeSettings SettingsAsset;
+        
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        public static void Initialize()
+        {
+            var assets = AssetDatabase.FindAssets($"t:{nameof(UnityFigmaBridgeSettings)}");
+            var assetGuid = assets.FirstOrDefault();
+            if (string.IsNullOrEmpty(assetGuid))
+            {
+                SettingsAsset = null;
+                return;
+            }
+
+            var settingsPath = AssetDatabase.GUIDToAssetPath(assetGuid);
+            SettingsAsset = AssetDatabase.LoadAssetAtPath<UnityFigmaBridgeSettings>(settingsPath);
+        }
+
+        /// <summary>
+        ///  Root folder for assets
+        /// </summary>
+        public static string FigmaAssetsRootFolder => SettingsAsset != null
+            ? SettingsAsset.FigmaAssetsRootFolder
+            : _figmaAssetsRootFolder;
+        
         /// <summary>
         /// Assert folder to store page prefabs)
         /// </summary>
-        public static string FigmaPagePrefabFolder = $"{FigmaAssetsRootFolder}/Pages";
+        public static string FigmaPagePrefabFolder => $"{FigmaAssetsRootFolder}/Pages";
         /// <summary>
         /// Assert folder to store flowScreen prefabs (root level frames on pages)
         /// </summary>
-        public static string FigmaScreenPrefabFolder = $"{FigmaAssetsRootFolder}/Screens";
+        public static string FigmaScreenPrefabFolder => $"{FigmaAssetsRootFolder}/Screens";
         /// <summary>
         /// Assert folder to store compoment prefabs
         /// </summary>
-        public static string FigmaComponentPrefabFolder = $"{FigmaAssetsRootFolder}/Components";
+        public static string FigmaComponentPrefabFolder => $"{FigmaAssetsRootFolder}/Components";
         /// <summary>
         /// Asset folder to store image fills
         /// </summary>
-        public static string FigmaImageFillFolder = $"{FigmaAssetsRootFolder}/ImageFills";
+        public static string FigmaImageFillFolder => $"{FigmaAssetsRootFolder}/ImageFills";
         /// <summary>
         /// Asset folder to store server rendered images
         /// </summary>
-        public static string FigmaServerRenderedImagesFolder = $"{FigmaAssetsRootFolder}/ServerRenderedImages";
+        public static string FigmaServerRenderedImagesFolder => $"{FigmaAssetsRootFolder}/ServerRenderedImages";
         
         /// <summary>
         /// Asset folder to store Font material presets
         /// </summary>
-        public static string FigmaFontMaterialPresetsFolder = $"{FigmaAssetsRootFolder}/FontMaterialPresets";
+        public static string FigmaFontMaterialPresetsFolder => $"{FigmaAssetsRootFolder}/FontMaterialPresets";
         
         /// <summary>
         /// Asset folder to store Font assets (TTF and generated TMP fonts)
         /// </summary>
-        public static string FigmaFontsFolder = $"{FigmaAssetsRootFolder}/Fonts";
+        public static string FigmaFontsFolder => $"{FigmaAssetsRootFolder}/Fonts";
         
         
         public static string GetPathForImageFill(string imageId)

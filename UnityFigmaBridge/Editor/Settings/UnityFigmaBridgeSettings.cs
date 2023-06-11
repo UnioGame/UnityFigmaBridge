@@ -10,7 +10,8 @@ using Sirenix.OdinInspector;
 
 namespace UnityFigmaBridge.Editor.Settings
 {
-    using UnityFigmaBridge.Editor.Settings;
+    using UnityEditor;
+    using Utils;
 
     public class UnityFigmaBridgeSettings : ScriptableObject
     {
@@ -19,11 +20,28 @@ namespace UnityFigmaBridge.Editor.Settings
         
         [Tooltip("Generate logic and linking of screens based on FIGMA's 'Prototype' settings")]
         public bool BuildPrototypeFlow=true;
+
+#if ODIN_INSPECTOR
+        [FolderPath]
+        [OnValueChanged(nameof(UpdateRootGenerationPath))]
+#endif
+        [Tooltip("figma Assets root folder")]
+        public string FigmaAssetsRootFolder = "Assets/Figma";
+
+#if ODIN_INSPECTOR
+        [Required]
+        [Sirenix.OdinInspector.FilePath()]
+#endif
+        public string GoogleFontsPath = "Packages/com.simonoliver.unityfigma/UnityFigmaBridge/Assets/google-fonts.json";
         
+#if ODIN_INSPECTOR
+        [Required]
+        [Sirenix.OdinInspector.FilePath()]
+#endif
         [Space(10)]
         [Tooltip("Scene used for prototype assets, including canvas")]
         public string RunTimeAssetsScenePath;
-        
+
         [Tooltip("Enable Auto layout components (Horizontal/Vertical layout) (EXPERIMENTAL)")]
         public bool EnableAutoLayout = false;
         
@@ -48,7 +66,10 @@ namespace UnityFigmaBridge.Editor.Settings
         [HideInInspector]
         public List<FigmaPageData> PageDataList = new ();
         
-        public UnityFigmaBridgeFlowGenerator FlowGenerator;
+#if ODIN_INSPECTOR
+        [InlineEditor]
+#endif
+        public List<UnityFigmaBridgeFlowGenerator> FlowGenerators = new List<UnityFigmaBridgeFlowGenerator>();
 
 #if ODIN_INSPECTOR
         [InlineEditor]
@@ -88,6 +109,15 @@ namespace UnityFigmaBridge.Editor.Settings
                 PageDataList.RemoveAt(index);
             }
             PageDataList.OrderBy(p => p.NodeId);
+        }
+
+        public void UpdateRootGenerationPath()
+        {
+            EditorUtility.SetDirty(this);
+            AssetDatabase.SaveAssetIfDirty(this);
+            
+            FigmaPaths.SettingsAsset = this;
+            FigmaPaths.Initialize();
         }
     }
 

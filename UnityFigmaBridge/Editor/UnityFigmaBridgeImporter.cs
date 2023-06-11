@@ -173,6 +173,15 @@ namespace UnityFigmaBridge.Editor
 
         private static bool CheckRunTimeRequirements()
         {
+            var scenePath = s_UnityFigmaBridgeSettings.RunTimeAssetsScenePath;
+            if (!string.IsNullOrEmpty(scenePath))
+            {
+                var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(s_UnityFigmaBridgeSettings.RunTimeAssetsScenePath);
+                s_UnityFigmaBridgeSettings.RunTimeAssetsScenePath = sceneAsset == null
+                    ? string.Empty
+                    : s_UnityFigmaBridgeSettings.RunTimeAssetsScenePath;
+            }
+
             if (string.IsNullOrEmpty(s_UnityFigmaBridgeSettings.RunTimeAssetsScenePath))
             {
                 if (
@@ -196,7 +205,8 @@ namespace UnityFigmaBridge.Editor
                 if (EditorUtility.DisplayDialog("Figma Bridge Scene",
                         "Current Scene doesnt match Runtime asset scene - switch scenes?", "OK", "Cancel"))
                 {
-                    EditorSceneManager.OpenScene(s_UnityFigmaBridgeSettings.RunTimeAssetsScenePath);
+                    var scene = EditorSceneManager.OpenScene(s_UnityFigmaBridgeSettings.RunTimeAssetsScenePath,OpenSceneMode.Additive);
+                    EditorSceneManager.SetActiveScene(scene);
                 }
                 else
                 {

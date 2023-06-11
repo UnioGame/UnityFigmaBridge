@@ -115,7 +115,7 @@ namespace UnityFigmaBridge.Editor.Nodes
             int nodeRecursionDepth, FigmaImportProcessData figmaImportProcessData,bool includedPageObject, bool withinComponentDefinition)
         {
             var settings = figmaImportProcessData.Settings;
-            var flow = settings.FlowGenerator;
+            var flows = settings.FlowGenerators;
             
             // Create a gameObject for this figma node and parent to parent transform
             var nodeGameObject = new GameObject(figmaNode.name, typeof(RectTransform));
@@ -161,7 +161,8 @@ namespace UnityFigmaBridge.Editor.Nodes
                 nodeGameObject.AddComponent<Image>().sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForServerRenderedImage(figmaNode.id,figmaImportProcessData.ServerRenderNodes));
                 
                 // This could be a button, so check for prototype functionality
-                flow.ApplyFunctionalityToNode(figmaNode, nodeGameObject, figmaImportProcessData);
+                foreach (var flow in flows)
+                    flow.ApplyFunctionalityToNode(figmaNode, nodeGameObject, figmaImportProcessData);
 
                 // If this is a component, we want to generate a prefab, to be used to link to instances later
                 if (figmaNode.type == NodeType.COMPONENT)
@@ -215,8 +216,9 @@ namespace UnityFigmaBridge.Editor.Nodes
             
             // Apply prototype elements for this figmaNode
             // This needs to be done AFTER children as some children will be needed for some button variations
-            flow.ApplyFunctionalityToNode(figmaNode ,nodeGameObject, figmaImportProcessData);
-
+            foreach (var flow in flows)
+                flow.ApplyFunctionalityToNode(figmaNode ,nodeGameObject, figmaImportProcessData);
+            
             switch (figmaNode.type)
             {
                 // If the parent is either a canvas or section, treat as a flowScreen and create a prefab. Only do this if it's on a generated page

@@ -12,7 +12,8 @@ using UnityFigmaBridge.Editor.Utils;
 
 namespace UnityFigmaBridge.Editor.Fonts
 {
-    
+    using Settings;
+
     // Using font list from https://github.com/jonathantneal/google-fonts-complete
     
     [Serializable]
@@ -55,7 +56,20 @@ namespace UnityFigmaBridge.Editor.Fonts
         {
             // If already loaded, ignore
             if (s_FontDefinitions != null) return;
-            var fontDataFile = AssetDatabase.LoadAssetAtPath("Packages/com.simonoliver.unityfigma/UnityFigmaBridge/Assets/google-fonts.json", typeof(TextAsset)) as TextAsset;
+
+            var guids = AssetDatabase.FindAssets($"t:{nameof(UnityFigmaBridgeSettings)}");
+            var guid = guids.FirstOrDefault();
+            var targetPath = string.IsNullOrEmpty(guid)
+                ? "Packages/com.simonoliver.unityfigma/UnityFigmaBridge/Assets/google-fonts.json"
+                : AssetDatabase.GUIDToAssetPath(guid);
+            
+            var fontDataFile = AssetDatabase.LoadAssetAtPath(targetPath, typeof(TextAsset)) as TextAsset;
+            if (fontDataFile == null)
+            {
+                Debug.LogError($"FIGMA Font data NOT FOUND");
+                return;
+            }
+            
             Debug.Log($"Font data loaded {fontDataFile.text.Length}");
             s_FontDefinitions = JsonConvert.DeserializeObject<Dictionary<string, GoogleFontDefinition>>(fontDataFile.text);
             Debug.Log($"Fonts found {s_FontDefinitions.Count}");

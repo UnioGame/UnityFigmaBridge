@@ -291,21 +291,21 @@ namespace UnityFigmaBridge.Editor.FigmaApi
                     // Download and write the image data
                     var imageDownloadWebRequest = UnityWebRequest.Get(downloadItem.Url);
                     await imageDownloadWebRequest.SendWebRequest();
-                    
+
                     byte[] imageBytes = imageDownloadWebRequest.downloadHandler.data;
-                    
+
                     // Create the directory if needed
-                    var directoryPath= Path.GetDirectoryName(downloadItem.FilePath);
+                    var directoryPath = Path.GetDirectoryName(downloadItem.FilePath);
                     if (!Directory.Exists(directoryPath)) Directory.CreateDirectory(directoryPath);
-                    
-                    File.WriteAllBytes(downloadItem.FilePath,imageBytes);
-                    
+
+                    File.WriteAllBytes(downloadItem.FilePath, imageBytes);
+
                     // Refresh the asset database to ensure the asset has been created
                     AssetDatabase.ImportAsset(downloadItem.FilePath);
                     AssetDatabase.Refresh();
-                    
+
                     // Set the properties for the texture, to mark as a sprite and with alpha transparency and no compression
-                    TextureImporter textureImporter = (TextureImporter) AssetImporter.GetAtPath(downloadItem.FilePath);
+                    TextureImporter textureImporter = (TextureImporter)AssetImporter.GetAtPath(downloadItem.FilePath);
                     textureImporter.textureType = TextureImporterType.Sprite;
                     textureImporter.alphaIsTransparency = true;
                     textureImporter.mipmapEnabled = true; // We'll enable mip maps to stop issues at lower resolutions
@@ -319,16 +319,19 @@ namespace UnityFigmaBridge.Editor.FigmaApi
                             textureImporter.wrapMode = TextureWrapMode.Repeat;
                             break;
                     }
-                    
+
                     textureImporter.SaveAndReimport();
 
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"Error downloading image file '{downloadItem.Url}' of type {downloadItem.FileType} for path {downloadItem.FilePath}: {e.ToString()}");
+                    Debug.LogWarning(
+                        $"Error downloading image file '{downloadItem.Url}' of type {downloadItem.FileType} for path {downloadItem.FilePath}: {e.ToString()}");
                 }
                 downloadIndex++;
             }
+            
+            EditorUtility.ClearProgressBar();
         }
         
         
