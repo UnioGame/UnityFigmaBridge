@@ -50,7 +50,9 @@ namespace UnityFigmaBridge.Editor.UnityComponentEditors
             EditorGUILayout.PropertyField(m_FillColor);
             EditorGUILayout.PropertyField(m_StrokeColor);
             EditorGUILayout.PropertyField(m_StrokeWidth);
-            EditorGUILayout.PropertyField(m_CornerRadius);
+
+            m_CornerRadius.vector4Value = EditorGUILayout.Vector4Field("CornerRadius", m_CornerRadius.vector4Value);
+            
             EditorGUILayout.PropertyField(m_Fill);
             EditorGUILayout.PropertyField(m_FillGradient);
             EditorGUILayout.PropertyField(m_GradientHandlePositions);
