@@ -11,8 +11,10 @@ using Sirenix.OdinInspector;
 namespace UnityFigmaBridge.Editor.Settings
 {
     using System;
+#if ODIN_INSPECTOR
     using Sirenix.OdinInspector.Editor;
-
+#endif
+    
     [CustomEditor(typeof(UnityFigmaBridgeSettings))]
     public sealed class UnityFigmaBridgeSettingsEditor : UnityEditor.Editor
     {
