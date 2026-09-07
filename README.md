@@ -111,6 +111,13 @@ As a result of the way that TextMeshPro handles outlines, the package will apply
 which uses "outside" positioning for strokes (the default in Figma), rather than "center" which TMPro usually uses (in
 future we'll support all three positions)
 
+## Color Space
+
+The package supports both Gamma and Linear rendering, but there are some things to bear in mind:
+* All used textures must have "sRGB" checked. The importer will automatically do this (as of 1.0.8) but if you are
+upgrading from a previous version, you'll need to reimport or do this manually.
+* TextMeshPro shaders currently do not render accurately in linear color space. We hope to address this in a future update
+
 ## Exporting Assets
 
 * If an object is marked for export, then it will render it as an image, download it as a PNG and place it in the path
@@ -211,7 +218,6 @@ Big thanks for  making those available online!
 * Stroke positions for shapes (outside/center)
 * Stroke positions for text (inside/center)
 * Dynamic creation of device fonts
-* Fit Image Modes
 * Video Fills
 * Star shapes only support five points and non-default radius (missing data from API)
 * Star shape only renders at uniform scale

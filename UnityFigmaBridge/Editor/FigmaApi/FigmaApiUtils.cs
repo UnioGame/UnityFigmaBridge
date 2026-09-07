@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityFigmaBridge.Editor.Settings;
 using UnityFigmaBridge.Editor.Utils;
 
 namespace UnityFigmaBridge.Editor.FigmaApi
@@ -59,10 +60,21 @@ namespace UnityFigmaBridge.Editor.FigmaApi
         /// <returns>File Id</returns>
         public static (bool, string) GetFigmaDocumentIdFromUrl(string url)
         {
-            // Format is https://www.figma.com/file/{DOC_ID}/{NAME}?node-id={NODE}
-            var initialSection = "https://www.figma.com/file/";
-            if (url.IndexOf(initialSection, StringComparison.Ordinal) != 0) return (false, "");
-            var remainder = url.Substring(initialSection.Length);
+            // Legacy Format is https://www.figma.com/file/{DOC_ID}/{NAME}?node-id={NODE}
+            // New format is https://www.figma.com/design/{DOC_ID}/{NAME}?node-id={NODE}
+            
+            var legacyInitialSection = "https://www.figma.com/file/";
+            var modernInitialSection = "https://www.figma.com/design/";
+
+            var legacyInitialSectionIndex = url.IndexOf(legacyInitialSection, StringComparison.Ordinal);
+            var modernInitialSectionIndex = url.IndexOf(modernInitialSection, StringComparison.Ordinal);
+            
+            // If neither found, it's invalid
+            if ( legacyInitialSectionIndex!= 0 && modernInitialSectionIndex!=0) return (false, "");
+            // Select best fit
+            var targetSectionToUse = legacyInitialSectionIndex == 0 ? legacyInitialSection : modernInitialSection;
+            
+            var remainder = url.Substring(targetSectionToUse.Length);
             var nextSeperatorIndex = remainder.IndexOf('/');
             if (nextSeperatorIndex == -1) return (false, "");
             return (true, remainder.Substring(0, nextSeperatorIndex));
@@ -92,10 +104,20 @@ namespace UnityFigmaBridge.Editor.FigmaApi
             {
                 throw new Exception($"Error downloading FIGMA document: {webRequest.error} url - {url}");
             }
+
             try
             {
+                // Create a settings object to ignore missing members and null fields that sometimes come from Figma
+                JsonSerializerSettings settings = new JsonSerializerSettings()
+                {
+                    DefaultValueHandling = DefaultValueHandling.Include,
+                    MissingMemberHandling = MissingMemberHandling.Ignore,
+                    NullValueHandling = NullValueHandling.Ignore,
+                };
+                
                 // Deserialize the document
-                figmaFile = JsonConvert.DeserializeObject<FigmaFile>(webRequest.downloadHandler.text);
+                figmaFile = JsonConvert.DeserializeObject<FigmaFile>(webRequest.downloadHandler.text, settings);
+
                 Debug.Log($"Figma file downloaded, name {figmaFile.name}");
             }
             catch (Exception e)
@@ -103,7 +125,7 @@ namespace UnityFigmaBridge.Editor.FigmaApi
                 throw new Exception($"Problem decoding Figma document JSON {e.ToString()}");
             }
 
-            if (writeFile) File.WriteAllText(WRITE_FILE_PATH, webRequest.downloadHandler.text);
+            if (writeFile) File.WriteAllText(Path.Combine("Assets", WRITE_FILE_PATH), webRequest.downloadHandler.text);
             return figmaFile;
         }
 
@@ -227,7 +249,7 @@ namespace UnityFigmaBridge.Editor.FigmaApi
         /// <param name="serverRenderData"></param>
         /// <param name="serverRenderNodes"></param>
         /// <returns></returns>
-        public static List<FigmaDownloadQueueItem> GenerateDownloadQueue(FigmaImageFillData imageFillData,List<string> foundImageFills,FigmaServerRenderData serverRenderData,List<ServerRenderNodeData> serverRenderNodes)
+        public static List<FigmaDownloadQueueItem> GenerateDownloadQueue(FigmaImageFillData imageFillData,List<string> foundImageFills,List<FigmaServerRenderData> serverRenderData,List<ServerRenderNodeData> serverRenderNodes)
         {
             // Check if each image fill file has already been downloaded. If not, add to download list
             //Dictionary<string, string> filteredImageFillList = new Dictionary<string, string>();
@@ -247,9 +269,9 @@ namespace UnityFigmaBridge.Editor.FigmaApi
             }
 
             // If required, process server render images
-            if (serverRenderData != null)
+           foreach (var serverRenderDataEntry in serverRenderData)
             {
-                foreach (var keyPair in serverRenderData.images)
+                foreach (var keyPair in serverRenderDataEntry.images)
                 {
                     if (string.IsNullOrEmpty(keyPair.Value))
                     {
@@ -277,7 +299,7 @@ namespace UnityFigmaBridge.Editor.FigmaApi
         /// Download required files and process
         /// </summary>
         /// <param name="downloadItems"></param>
-        public static async Task DownloadFiles(List<FigmaDownloadQueueItem> downloadItems)
+        public static async Task DownloadFiles(List<FigmaDownloadQueueItem> downloadItems, UnityFigmaBridgeSettings settings)
         {
             var downloadCount = downloadItems.Count;
             var downloadIndex = 0;
@@ -307,17 +329,24 @@ namespace UnityFigmaBridge.Editor.FigmaApi
                     // Set the properties for the texture, to mark as a sprite and with alpha transparency and no compression
                     TextureImporter textureImporter = (TextureImporter)AssetImporter.GetAtPath(downloadItem.FilePath);
                     textureImporter.textureType = TextureImporterType.Sprite;
+                    textureImporter.spriteImportMode = SpriteImportMode.Single;
                     textureImporter.alphaIsTransparency = true;
                     textureImporter.mipmapEnabled = true; // We'll enable mip maps to stop issues at lower resolutions
                     textureImporter.textureCompression = TextureImporterCompression.Uncompressed;
+                    textureImporter.sRGBTexture = true;
 
 
                     switch (downloadItem.FileType)
                     {
                         case FigmaDownloadQueueItem.FigmaFileType.ImageFill:
-                            // For image fills, we want to repeat
+                            // We'll want to allow repeating textures to support "tile" mode
                             textureImporter.wrapMode = TextureWrapMode.Repeat;
                             break;
+                        case FigmaDownloadQueueItem.FigmaFileType.ServerRenderedImage:
+                            // For server rendered images we want to clamp the texture
+                            textureImporter.wrapMode = TextureWrapMode.Clamp;
+                            break;
+                            
                     }
 
                     textureImporter.SaveAndReimport();
@@ -333,7 +362,30 @@ namespace UnityFigmaBridge.Editor.FigmaApi
             
             EditorUtility.ClearProgressBar();
         }
-        
-        
+
+    
+        /// <summary>
+        /// Checks that existing assets are in the correct format
+        /// </summary>
+        public static void CheckExistingAssetProperties()
+        {
+            CheckImageFillTextureProperties();
+        }
+
+        /// <summary>
+        /// Checks downloaded image fills
+        /// </summary>
+        private static void CheckImageFillTextureProperties()
+        {
+            foreach (var filePath in Directory.GetFiles(FigmaPaths.FigmaImageFillFolder))
+            {
+                var textureImporter = AssetImporter.GetAtPath(filePath) as TextureImporter;
+                if (textureImporter == null) continue;
+                // Previous versions may not have sRGB set
+                if (textureImporter.sRGBTexture) continue;
+                textureImporter.sRGBTexture = true;
+                textureImporter.SaveAndReimport();
+            }
+        }
     }
 }

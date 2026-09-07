@@ -54,7 +54,10 @@ namespace UnityFigmaBridge.Editor.FigmaApi
         STICKY,
         SHAPE_WITH_TEXT,
         CONNECTOR,
-        SECTION
+        SECTION,
+        TABLE,
+        TABLE_CELL,
+        WASHI_TAPE
     }
     
     
@@ -749,6 +752,8 @@ namespace UnityFigmaBridge.Editor.FigmaApi
             GRADIENT_DIAMOND,
             IMAGE,
             EMOJI,
+            VIDEO,
+            PATTERN
         }
 
         /// <summary>

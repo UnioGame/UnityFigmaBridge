@@ -361,6 +361,41 @@ namespace UnityFigmaBridge.Runtime.UI
                            };
                        }
                        break;
+                    case ImageScaleMode.Fit:
+                        // Fit adjusts UVs so that longest side fits. We use the longest ratio of sprite size
+                        // to rect size to determine which axis drives fill size
+                        var rWidth = sprite.rect.width / r.width;
+                        var rHeight = sprite.rect.height / r.height;
+                        var horizontalIsShortest = rWidth < rHeight;
+
+                        if (horizontalIsShortest)
+                        {
+                            
+                            // Calculate the ideal height to calculate ratio with actual size and uOffset
+                            var idealHeight = r.height * (sprite.rect.width / sprite.rect.height);
+                            var uOffset = 0.5f * (r.width / idealHeight);
+                            texCoords = new Vector2[]
+                            {
+                               new Vector2(0.5f - uOffset, 0),
+                               new Vector2(0.5f - uOffset, 1),
+                               new Vector2(0.5f + uOffset, 1),
+                               new Vector2(0.5f + uOffset, 0)
+                            };
+                        }
+                        else
+                        {
+                            // Calculate the ideal width to calculate ratio with actual size and vOffset
+                            var idealWidth = r.width * (sprite.rect.height / sprite.rect.width);
+                            var vOffset = 0.5f * (r.height / idealWidth);
+                            texCoords = new Vector2[]
+                            {
+                               new Vector2(0, 0.5f - vOffset),
+                               new Vector2(0, 0.5f + vOffset),
+                               new Vector2(1, 0.5f + vOffset),
+                               new Vector2(1, 0.5f - vOffset)
+                            };
+                        }
+                        break;
                    default:
                        texCoords = new Vector2[]
                        {
@@ -375,6 +410,9 @@ namespace UnityFigmaBridge.Runtime.UI
            }
 
            // Largely this is the the same as Graphic original, but with extra UV Channels settings
+
+            // If the player settings is set to linear, we need to convert the vertex color to gamma space
+            // because FigmaImageShader treats the color as in gamma space.
             Color32 color32 = color;
             vh.Clear();
             // Order is TL, BL, BR, TR
@@ -432,7 +470,10 @@ namespace UnityFigmaBridge.Runtime.UI
             
             // Second element is fill angle
             mat.SetKeyword(new LocalKeyword(baseMaterial.shader, "ARC_ANGLE_RANGE"),m_EllipseArcAngleRange.y<Mathf.PI*2.0f);
-           
+            
+            // We want to clamp if in fit mode (we'll lerp to a transparent colour if outside UV range 0..1)
+            mat.SetKeyword(new LocalKeyword(baseMaterial.shader, "CLAMP_TEXTURE"),m_ImageScaleMode== ImageScaleMode.Fit);
+            
             // Set gradient properties if required
             switch (m_Fill)
             {
@@ -461,6 +502,10 @@ namespace UnityFigmaBridge.Runtime.UI
                 var percentGradientLength = i / (float)(i - 1);
                 gradientColors[i].a= m_FillGradient.Evaluate(percentGradientLength).a;
             }
+
+            // Since color interpolation must be done in gamma space,
+            // the gradient colors are passed to the shader without conversion to linear space,
+            // even if the color space setting is set to linear.
             mat.SetColorArray(s_GradientColorsPropertyID,gradientColors);
             mat.SetFloatArray(s_GradientStopsPropertyID,gradientStops);
             mat.SetFloat(s_GradientNumStopsPropertyID,gradientStopCount);
@@ -490,10 +535,5 @@ namespace UnityFigmaBridge.Runtime.UI
             canvasAdditionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord1;
             canvas.additionalShaderChannels = canvasAdditionalShaderChannels;
         }
-        
     }
-
-
-
-
 }

@@ -25,8 +25,9 @@ Shader "Figma/FigmaImageShader"
         // Corner radius defines corner for rectangle shapes, one per corner
         _CornerRadius ("Corner Radius", Vector) = (0, 0, 0, 0)
         
-        _StrokeColor ("Stroke Color", Color) = (1,1,1,1)
         _StrokeWidth ("Stroke Width", Float) = 2
+        _StrokeColor ("Stroke Color", Color) = (1,1,1,1)
+        _FillColor ("Fill Color", Color) = (1,1,1,1)
         
         // End Figma properties
     }
@@ -76,6 +77,7 @@ Shader "Figma/FigmaImageShader"
             #pragma multi_compile_local _ STROKE
             #pragma multi_compile_local _ SHAPE_RECTANGLE SHAPE_ELLIPSE SHAPE_STAR
             #pragma multi_compile_local _ ARC_ANGLE_RANGE
+            #pragma multi_compile_local _ CLAMP_TEXTURE
 
             struct appdata_t
             {
@@ -147,14 +149,11 @@ Shader "Figma/FigmaImageShader"
 
                     float4 clampedCornerRadius=float4(_CornerRadius.x,_CornerRadius.y,_CornerRadius.z,_CornerRadius.w);
                 
-                    clampedCornerRadius.x/=cornerSizeTopRatio;
-                    clampedCornerRadius.x/=cornerSizeRightRatio;
-                    clampedCornerRadius.y/=cornerSizeBottomRatio;
-                    clampedCornerRadius.y/=cornerSizeRightRatio;
-                    clampedCornerRadius.z/=cornerSizeTopRatio;
-                    clampedCornerRadius.z/=cornerSizeLeftRatio;
-                    clampedCornerRadius.w/=cornerSizeBottomRatio;
-                    clampedCornerRadius.w/=cornerSizeLeftRatio;
+                    // Divide by the largest of the relevant ratios such that the corner is only constrained by the smallest side.
+                    clampedCornerRadius.x/=max(cornerSizeTopRatio,cornerSizeRightRatio);
+                    clampedCornerRadius.y/=max(cornerSizeBottomRatio,cornerSizeRightRatio);
+                    clampedCornerRadius.z/=max(cornerSizeTopRatio,cornerSizeLeftRatio);
+                    clampedCornerRadius.w/=max(cornerSizeBottomRatio,cornerSizeLeftRatio);
                 
                     OUT.clamped_corner_radius=clampedCornerRadius;
                 #endif
@@ -255,6 +254,14 @@ Shader "Figma/FigmaImageShader"
                 return length(r-p) * sign(p.y-r.y);
             }
 
+            float4 GammaToLinearIfNeeded(float4 color)
+            {
+            #if UNITY_COLORSPACE_GAMMA
+                return color;
+            #else
+                return float4(GammaToLinearSpace(color.rgb), color.a);
+            #endif
+            }
         
             float4 GetGradientColor(float percAlongGradient)
             {
@@ -264,7 +271,10 @@ Shader "Figma/FigmaImageShader"
                 for ( int i=1; i<_GradientNumStops-1; ++i ) {
                     gradientColor = lerp(gradientColor, _GradientColors[i+1], smoothstep( _GradientStops[i],  _GradientStops[i+1], percAlongGradient ) );
                 }
-                return gradientColor;
+
+                // If the setting of the color space is set to Linear,
+                // convert the color to linear space after the interpolation.
+                return  GammaToLinearIfNeeded(gradientColor);
             }
 
 
@@ -345,6 +355,12 @@ Shader "Figma/FigmaImageShader"
                 #endif
                 
                 half4 color = (tex2D(_MainTex, IN.texcoord) + _TextureSampleAdd)*shapeColor;
+                #if CLAMP_TEXTURE
+                    // Calculate within bounds factor relative to 0..1 (without branching to keep performant)
+                    float withinBoundsFactor= 1.0f-step(IN.texcoord.x,0.0f) - step(1.0f, IN.texcoord.x)-step(IN.texcoord.y,0.0f)- step(1.0f, IN.texcoord.y);
+                    // Lerp to transparent if outside this range
+                    color=lerp(half4(0,0,0,0),color,withinBoundsFactor);
+                #endif
                 
                 #if SHAPE_ELLIPSE
                    #if STROKE
@@ -396,11 +412,15 @@ Shader "Figma/FigmaImageShader"
                     clip (color.a - 0.001);
                 #endif
 
+                // For accurate blending that matches the Figma doc, we want to convert the alpha value back
+                // to gamma space prior to blend
                 #if UNITY_COLORSPACE_GAMMA
-                     return color;
+                    return color;
                 #else
-                    return float4(GammaToLinearSpace( color.rgb),color.a);
+                    return float4(color.rgb, LinearToGammaSpace(color.a).r);
                 #endif
+                 
+                return color;
                 
             }
 
